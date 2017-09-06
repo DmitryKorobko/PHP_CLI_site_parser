@@ -1,0 +1,19 @@
+{
+    "name": "steinmann/php_cli_site_parser",
+    "description": "test task parser",
+    "type": "project",
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "Dmitry",
+            "email": "korobko.dmitry@ratkussoft.com"
+        }
+    ],
+    "minimum-stability": "dev",
+    "require": {},
+    "autoload": {
+        "psr-4": {
+            "liw\\":""
+        }
+    }
+}
