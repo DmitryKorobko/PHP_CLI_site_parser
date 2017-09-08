@@ -17,7 +17,7 @@ class Actions {
         echo "Please enter URL for parsing: \n";
         $url = readline();
         $domain = $this->getDomain($url);
-        $linksArray = $this->getUrlLinksOfDomain($url);
+        $linksArray = $this->getUrlLinksOfDomain($url); var_dump($linksArray); exit;
         $imagesArray = $this->getImageLinks($linksArray);
         $this->readWriteReport($domain, true, $imagesArray);
     }
@@ -42,76 +42,46 @@ class Actions {
     }
 
     //Search all links of domain in the pages by URL function
-    public function getUrlLinksOfDomain($url, $beforeUrls = null){
+    public function getUrlLinksOfDomain($url, $urls = null) {
         $from = (substr($url, 0, 4) == 'http') ? $url : 'http://' . $url;
         $domain = $this->getDomain($from);
+        $allLinkIsChecked = true;
+        $urls[$from] = true;
 
-        if(@fopen($from, "r")) {
+        if (@fopen($from, "r")) {
             $html = file_get_contents($from);
-        } else {
-            $html = null;
-        }
-
-        if ($html !== null) {
             preg_match_all("/<[Aa][\s]{1}[^>]*[Hh][Rr][Ee][Ff][^=]*=[ '\"\s]*([^ \"'>\s#]+)[^>]*>/", $html, $matches);
 
-            if ($beforeUrls === null) {
-                $urls = [];
+            foreach ($matches[1] as $match) {
+                $matchVal = ((substr($url, 0, 4) == 'http') && (stristr($match, $domain))) ? $match : 'http://' . $domain . $match;
 
-                foreach ($matches[1] as $match){
-
-                    if ((stristr($match, $domain) && substr($match, 0, 4) == 'http')) {
-                        $urls[$match] = false;
-                    }
+                if ($matchVal !== $from && empty($urls[$matchVal])) {
+                    $urls[$matchVal] = false;
                 }
-            } else {
-                $urls = $beforeUrls;
-                $newUrls = [];
-
-                foreach ($matches[1] as $match){
-                    $matchVal = ((substr($url, 0, 4) == 'http') && (stristr($match, $domain))) ? $match : 'http://' . $domain . $match;
-                    $newUrls[$matchVal] = false;
-                }
-
-             $urls = $urls + $newUrls;
             }
 
-            if (!empty($urls)) {
-                $allLinkIsChecked = true;
+            foreach ($urls as $key => $value) {
+                if ($value === false) {
+                    $allLinkIsChecked = false;
+                }
+            }
+
+            if ($allLinkIsChecked === false) {
+                $urlsArray = [];
+
                 foreach ($urls as $key => $value) {
                     if ($value === false) {
-                        $allLinkIsChecked = false;
-                        break;
+                        $urlsArray = $urlsArray + ($this->getUrlLinksOfDomain($key, $urls));
                     }
                 }
 
-                if ($allLinkIsChecked === false) {
-                    $urlsArray = [];
+                $urls = $urls + $urlsArray;
 
-                    foreach ($urls as $key => $value) {
-                        if (!$value) {
-                            $urls[$key] = true;
-                            $tempUrls = ($this->getUrlLinksOfDomain($key, $urls));
-
-                            if ($tempUrls !== null) {
-                                $urlsArray = $urlsArray + $tempUrls;
-                            }
-                        }
-                    }
-
-                    if (isset($tempUrls) && $tempUrls !== null) {
-                        $urls = $urls + $urlsArray;
-                    }
-
-                    return $urls;
-                } else {
-
-                    return null;
-                }
+                return $urls;
             }
         }
 
-        return null;
+        return $urls;
     }
 
     //Search all images in the pages by URL function
@@ -119,25 +89,24 @@ class Actions {
     {
         $imageLinks = [];
 
-        if ($urlsArray !== null){
-            foreach ($urlsArray as $urlKey => $urlValue) {
-                $html = file_get_contents($urlKey);
-                preg_match_all("/<[Ii][Mm][Gg][\s]{1}[^>]*[Ss][Rr][Cc][^=]*=[ '\"\s]*([^ \"'>\s#]+)[^>]*>/", $html, $matches);
+        foreach ($urlsArray as $urlKey => $urlValue) {
+            $html = file_get_contents($urlKey);
+            preg_match_all("/<[Ii][Mm][Gg][\s]{1}[^>]*[Ss][Rr][Cc][^=]*=[ '\"\s]*([^ \"'>\s#]+)[^>]*>/", $html, $matches);
 
-                foreach ($matches[1] as $key => $value){
-                    if (substr($value, 0, 4) == 'http') {
-                        if(@fopen($value, "r")) {
-                            $imageLinks[$key] = 'link: ' . $value . ' source page: ' . $key;
-                        }
-                    } else {
-                        if(@fopen($urlKey . $value, "r")) {
-                            $imageLinks[$key] = 'link: ' . $urlKey . $value . ' source page: ' . $key;
-                        }
+            foreach ($matches[1] as $key => $value){
+                if (substr($value, 0, 4) == 'http') {
+                    if(@fopen($value, "r")) {
+                        $imageLinks[$key] = 'link: ' . $value . ' source page: ' . $key;
+                    }
+                } else {
+                    if(@fopen($urlKey . $value, "r")) {
+                        $imageLinks[$key] = 'link: ' . $urlKey . $value . ' source page: ' . $key;
                     }
                 }
             }
-            return array_unique($imageLinks);
         }
+
+        return array_unique($imageLinks);
     }
 
     //Get domain by URL function
